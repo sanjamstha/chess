@@ -1,2 +1,2 @@
-chess
+# chess
 pygame
