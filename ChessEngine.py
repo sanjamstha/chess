@@ -153,6 +153,44 @@ class GameState():
                     break
                 step += 1
 
+    # Get all the queen moves for the queen located at rol, col and add these moves to the list 
+    def getQueenMoves(self, r, c, moves):
+        enemy_color = 'b' if self.whiteToMove else 'w'
+
+        # 8 directions = rook + bishop
+        directions = [
+            (-1, 1),   # top right
+            (0, 1),    # right
+            (1, 1),    # bottom right
+            (1, 0),    # down
+            (1, -1),   # bottom left
+            (0, -1),   # left
+            (-1, -1),  # top left
+            (-1, 0)    # up
+        ]
+
+        for dr, dc in directions:
+            step = 1
+            while True:
+                end_r = r + dr * step
+                end_c = c + dc * step
+
+                # Stop if outside board
+                if not (0 <= end_r <= 7 and 0 <= end_c <= 7):
+                    break
+
+                nxtSq = self.board[end_r][end_c]
+
+                if nxtSq == "--":
+                    # empty square → valid move
+                    moves.append(Move((r, c), (end_r, end_c), self.board))
+                else:
+                    # capture only if enemy piece
+                    if nxtSq[0] == enemy_color:
+                        moves.append(Move((r, c), (end_r, end_c), self.board))
+                    break  # blocked by piece
+
+                step += 1
 
                     
 
