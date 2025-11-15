@@ -81,7 +81,55 @@ class GameState():
             if c-1 >= 0: # capture to the right
                 if self.board[r+1][c-1][0] == 'w': # enemy piece to capture
                     moves.append(Move((r, c), (r+1, c-1), self.board))
+    
+    # Get all the rook moves for the rook located at rol, col and add these moves to the list 
+    def getRookMoves(self, r, c, moves):
+        # rook moves in all 4 directions, use for/while loop, stop conditions are 2: edge of board, or piece on square, and if enemy piece its a valid move
+        enemy_color = 'b' if self.whiteToMove else 'w'
+        # # for mvoes/captures to the right, code has to repeat for all 4 directions
+        # step = 1
+        # while (c+step<=7):
+        #     nxtSq = self.board[r][c+step]
+        #     if nxtSq == "--":
+        #         moves.append(Move((r,c),(r,c+step),self.board))
+        #     else:
+        #         if nxtSq[0] == enemy_color:
+        #             moves.append(Move((r,c),(r,c+step),self.board))
+        #         break
+        #     step += 1
 
+        # (dr, dc) for right, left, down, up
+        directions = [
+            (0, 1),   # right
+            (0, -1),  # left
+            (1, 0),   # down
+            (-1, 0),  # up
+        ]
+
+        for dr, dc in directions:
+            step = 1
+            while True:
+                end_r = r + dr * step
+                end_c = c + dc * step
+
+                # edge of board stop
+                if not (0 <= end_r <= 7 and 0 <= end_c <= 7):
+                    break
+
+                nxtSq = self.board[end_r][end_c]
+
+                if nxtSq == "--":
+                    moves.append(Move((r, c), (end_r, end_c), self.board))
+
+                else:
+                    if nxtSq[0] == enemy_color:
+                        moves.append(Move((r, c), (end_r, end_c), self.board))
+                    break
+
+                step += 1
+
+
+                    
 
 
 
