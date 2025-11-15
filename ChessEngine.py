@@ -192,7 +192,47 @@ class GameState():
 
                 step += 1
 
-                    
+    # Get all the king moves for the king located at rol, col and add these moves to the list 
+    def getKingMoves(self,r,c,moves):
+        enemy_color = 'b' if self.whiteToMove else 'w'
+
+        # 8 directions = rook + bishop
+        directions = [
+            (-1, 1),   # top right
+            (0, 1),    # right
+            (1, 1),    # bottom right
+            (1, 0),    # down
+            (1, -1),   # bottom left
+            (0, -1),   # left
+            (-1, -1),  # top left
+            (-1, 0)    # up
+        ]
+
+        for dr, dc in directions:
+            end_r = r + dr 
+            end_c = c + dc 
+
+            # Stop if outside board
+            if not (0 <= end_r <= 7 and 0 <= end_c <= 7):
+                continue
+
+            nxtSq = self.board[end_r][end_c]
+
+            if nxtSq == "--":
+                # empty square → valid move
+                moves.append(Move((r, c), (end_r, end_c), self.board))
+            else:
+                # capture only if enemy piece
+                if nxtSq[0] == enemy_color:
+                    moves.append(Move((r, c), (end_r, end_c), self.board))
+                continue  # blocked by piece
+
+    # Get all the knight moves for the knight located at rol, col and add these moves to the list 
+    def getKnightMoves(self,r,c,moves):
+        pass
+
+    
+
 
 
 

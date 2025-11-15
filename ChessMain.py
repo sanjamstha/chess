@@ -52,7 +52,6 @@ def main():
                 if len(playerClicks) == 2: #after 2nd click
                     move = ChessEngine.Move(playerClicks[0], playerClicks[1], gs.board)
                     print(move.getChessNotation())
-                    print(gs.whiteToMove)
                     if move in validMoves:
                         gs.makeMove(move)
                         moveMade = True
