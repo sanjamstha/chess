@@ -128,6 +128,31 @@ class GameState():
 
                 step += 1
 
+    # Get all the Bishop moves for the bishop located at rol, col and add these moves to the list 
+    def getBishopMoves(self,r,c,moves):
+        enemy_color = 'b' if self.whiteToMove else 'w'
+        directions = [
+            (-1,1), # top right
+            (1,1), # bottom right
+            (-1,-1), # top left
+            (1,-1) # bottom left
+        ]
+        for dr, dc in directions:
+            step = 1
+            while True:
+                end_r = r + dr * step
+                end_c = c + dc * step
+                if not (0 <= end_r <=7 and 0 <= end_c <=7):
+                    break
+                nxtSq = self.board[end_r][end_c]
+                if nxtSq == "--":
+                    moves.append(Move((r,c),(end_r,end_c),self.board))
+                else:
+                    if nxtSq[0] == enemy_color:
+                        moves.append(Move((r, c), (end_r, end_c), self.board))
+                    break
+                step += 1
+
 
                     
 
