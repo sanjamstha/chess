@@ -36,6 +36,10 @@ class GameState():
             self.whiteKingLocation = (move.endRow, move.endCol)
         elif move.pieceMoved == 'bK':
             self.blackKingLocation = (move.endRow, move.endCol)
+        
+        # pawn promotion
+        if move.isPawnPromotion:
+            self.board[move.endRow][move.endCol] = move.pieceMoved[0] + 'Q'
     
     # Undo the last move made 
     def undoMove(self): 
@@ -256,30 +260,30 @@ class GameState():
 
     # Get all the knight moves for the knight located at rol, col and add these moves to the list 
     def getKnightMoves(self,r,c,moves):
-            enemy_color = 'b' if self.whiteToMove else 'w'
-            directions = [
-                (-2,1),
-                (-1,2),
-                (1,2),
-                (2,1),
-                (2,-1),
-                (1,-2),
-                (-1,-2),
-                (-2,-1)
-            ]
-            for dr, dc in directions:
-                end_r = r + dr 
-                end_c = c + dc 
+        enemy_color = 'b' if self.whiteToMove else 'w'
+        directions = [
+            (-2,1),
+            (-1,2),
+            (1,2),
+            (2,1),
+            (2,-1),
+            (1,-2),
+            (-1,-2),
+            (-2,-1)
+        ]
+        for dr, dc in directions:
+            end_r = r + dr 
+            end_c = c + dc 
 
-                if not (0 <= end_r <= 7 and 0 <= end_c <= 7):
-                    continue
-                nxtSq = self.board[end_r][end_c]
-                if nxtSq == "--":
+            if not (0 <= end_r <= 7 and 0 <= end_c <= 7):
+                continue
+            nxtSq = self.board[end_r][end_c]
+            if nxtSq == "--":
+                moves.append(Move((r,c),(end_r,end_c),self.board))
+            else:
+                if nxtSq[0] == enemy_color:
                     moves.append(Move((r,c),(end_r,end_c),self.board))
-                else:
-                    if nxtSq[0] == enemy_color:
-                        moves.append(Move((r,c),(end_r,end_c),self.board))
-                    continue
+                continue
 
 class Move():
     # map keys to value 
@@ -296,6 +300,9 @@ class Move():
         self.endCol = endsq[1]
         self.pieceMoved = board[self.startRow][self.startCol]
         self.pieceCaptured = board[self.endRow][self.endCol]
+        self.isPawnPromotion = False
+        if (self.pieceMoved == 'wp' and self.endRow == 0) or (self.pieceMoved == 'bp' and self.endRow == 7):
+            self.isPawnPromotion = True
         self.moveID = self.startRow *1000 + self.startCol *100 + self.endRow*10 + self.endCol
         # print(self.moveID)
 
