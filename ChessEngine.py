@@ -229,9 +229,31 @@ class GameState():
 
     # Get all the knight moves for the knight located at rol, col and add these moves to the list 
     def getKnightMoves(self,r,c,moves):
-        pass
+            enemy_color = 'b' if self.whiteToMove else 'w'
+            directions = [
+                (-2,1),
+                (-1,2),
+                (1,2),
+                (2,1),
+                (2,-1),
+                (1,-2),
+                (-1,-2),
+                (-2,-1)
+            ]
+            for dr, dc in directions:
+                end_r = r + dr 
+                end_c = c + dc 
 
-    
+                if not (0 <= end_r <= 7 and 0 <= end_c <= 7):
+                    continue
+                nxtSq = self.board[end_r][end_c]
+                if nxtSq == "--":
+                    moves.append(Move((r,c),(end_r,end_c),self.board))
+                else:
+                    if nxtSq[0] == enemy_color:
+                        moves.append(Move((r,c),(end_r,end_c),self.board))
+                    continue
+
 
 
 
