@@ -30,6 +30,7 @@ def main():
     gs = ChessEngine.GameState()
     validMoves = gs.getValidMoves()
     moveMade = False #flag variable for when  a move is made
+    animate = False #flag variable for when we should animate a move
     loadImages() #only do this once before the while loop
     running = True
     sqSelected = () # no square selected initially, keep track of last click of the user (tuple: row, col)
@@ -56,20 +57,24 @@ def main():
                         if move == validMoves[i]:
                             gs.makeMove(validMoves[i])
                             moveMade = True
+                            animate = True
                             sqSelected = () # reset user clicks
                             playerClicks = []
                     if not moveMade: 
                         playerClicks = [sqSelected]
-                        print("invalid move")
             # key handlers
             elif e.type == p.KEYDOWN:
                 if e.key == p.K_z: #undo when 'z' is pressed  
                     gs.undoMove()
                     moveMade = True 
+                    animate = False
 
         if moveMade:
+            if animate:
+                animateMove(gs.moveLog[-1], screen, gs.board, clock)
             validMoves = gs.getValidMoves()
             moveMade = False
+            animate = False
 
         drawGameState(screen, gs, validMoves, sqSelected)
         clock.tick(MAX_FPS)
@@ -98,7 +103,8 @@ def drawGameState(screen,gs, validMoves, sqSelected):
     drawPieces(screen, gs.board)
 
 # Draw the squares on the board. The top left square is always light
-def drawBoard(screen):
+def drawBoard(screen): 
+    global colors
     colors = [p.Color("white"), p.Color("gray")]
     for r in range(DIMENSION):
         for c in range(DIMENSION):      
@@ -112,6 +118,29 @@ def drawPieces(screen, board):
             piece = board[r][c]
             if piece != "--": # not an empty square
                 screen.blit(IMAGES[piece], p.Rect(c*SQ_SIZE, r*SQ_SIZE, SQ_SIZE, SQ_SIZE))
+
+def animateMove(move, screen, board, clock):
+    global colors
+    coords = [] #list of coords that the animation will move through
+    dr = move.endRow - move.startRow
+    dc = move.endCol - move.startCol
+    framesPerSquare = 10 #frames to move one square
+    frameCount = (abs(dr) + abs(dc)) * framesPerSquare
+    for frame in range(frameCount + 1):
+        r, c = ((move.startRow + dr*frame/frameCount, move.startCol + dc*frame/frameCount))
+        drawBoard(screen)
+        drawPieces(screen, board)
+        # erase the piece moved from it's ending square
+        color = colors[(move.endRow + move.endCol) % 2]
+        endSquare = p.Rect(move.endCol * SQ_SIZE, move.endRow * SQ_SIZE, SQ_SIZE, SQ_SIZE)
+        p.draw.rect(screen, color, endSquare)
+        # draw capture piece onto rectangle
+        if move.pieceCaptured != '--':
+            screen.blit(IMAGES[move.pieceCaptured], endSquare)
+        # draw moving piece 
+        screen.blit(IMAGES[move.pieceMoved], p.Rect(c*SQ_SIZE, r*SQ_SIZE, SQ_SIZE, SQ_SIZE))
+        p.display.flip()
+        clock.tick(60)
 
 
 
