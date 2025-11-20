@@ -85,14 +85,16 @@ def main():
 
         # AI move finder logic
         if not gameOver and not humanTurn:
-            AIMove = SmartMoveFinder.findRandomMove(validMoves)
+            AIMove = SmartMoveFinder.findBestMove(gs, validMoves)
+            if AIMove is None:
+                AIMove = SmartMoveFinder.findRandomMove(validMoves)
             gs.makeMove(AIMove)
             moveMade = True
             animate = True
 
         if moveMade:
-            if animate:
-                animateMove(gs.moveLog[-1], screen, gs.board, clock)
+            # if animate:
+            #     animateMove(gs.moveLog[-1], screen, gs.board, clock)
             validMoves = gs.getValidMoves()
             moveMade = False
             animate = False
