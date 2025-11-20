@@ -46,8 +46,8 @@ def findBestMove(gs, validMoves):
             if score > opponentMaxScore:
                 opponentMaxScore = score
             gs.undoMove()
-        if opponentMinMaxScore > opponentMaxScore:
-            opponentMinMaxScore = opponentMinMaxScore
+        if opponentMaxScore < opponentMinMaxScore:
+            opponentMinMaxScore = opponentMaxScore
             bestPlayerMove = playerMove
         gs.undoMove()
     return bestPlayerMove
