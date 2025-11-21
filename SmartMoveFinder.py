@@ -3,7 +3,7 @@ import random
 pieceScore = {"K":100, "Q":9, "R":5, "B":3, "N":3, "p":1}
 CHECKMATE = 1000
 STALEMATE = 0
-DEPTH = 2
+DEPTH = 3
 
 def findRandomMove(validMoves):
     return validMoves[random.randint(0, len(validMoves)-1)]
@@ -28,46 +28,48 @@ def findRandomMove(validMoves):
 #     return bestMove
 
 # MinMax Algorithm with no recursion 
-def findBestMove(gs, validMoves):
-    turnMultiplier = 1 if gs.whiteToMove else -1
-    opponentMinMaxScore = CHECKMATE
-    bestPlayerMove = None
-    random.shuffle(validMoves)
-    for playerMove in validMoves:
-        gs.makeMove(playerMove)
-        opponentsMoves = gs.getValidMoves()
-        if gs.staleMate:
-            opponentMaxScore = STALEMATE
-        elif gs.checkMate:
-            opponentMaxScore = -CHECKMATE
-        else:
-            opponentMaxScore = -CHECKMATE
-            for opponentsMove in opponentsMoves:
-                gs.makeMove(opponentsMove)
-                if gs.checkMate:
-                    score = CHECKMATE
-                elif gs.staleMate:
-                    score = STALEMATE
-                else:
-                    score = -turnMultiplier * scoreMaterial(gs.board)
-                if score > opponentMaxScore:
-                    opponentMaxScore = score
-                gs.undoMove()
-        if opponentMaxScore < opponentMinMaxScore:
-            opponentMinMaxScore = opponentMaxScore
-            bestPlayerMove = playerMove
-        gs.undoMove()
-    return bestPlayerMove
+# def findBestMove(gs, validMoves):
+#     turnMultiplier = 1 if gs.whiteToMove else -1
+#     opponentMinMaxScore = CHECKMATE
+#     bestPlayerMove = None
+#     random.shuffle(validMoves)
+#     for playerMove in validMoves:
+#         gs.makeMove(playerMove)
+#         opponentsMoves = gs.getValidMoves()
+#         if gs.staleMate:
+#             opponentMaxScore = STALEMATE
+#         elif gs.checkMate:
+#             opponentMaxScore = -CHECKMATE
+#         else:
+#             opponentMaxScore = -CHECKMATE
+#             for opponentsMove in opponentsMoves:
+#                 gs.makeMove(opponentsMove)
+#                 if gs.checkMate:
+#                     score = CHECKMATE
+#                 elif gs.staleMate:
+#                     score = STALEMATE
+#                 else:
+#                     score = -turnMultiplier * scoreMaterial(gs.board)
+#                 if score > opponentMaxScore:
+#                     opponentMaxScore = score
+#                 gs.undoMove()
+#         if opponentMaxScore < opponentMinMaxScore:
+#             opponentMinMaxScore = opponentMaxScore
+#             bestPlayerMove = playerMove
+#         gs.undoMove()
+#     return bestPlayerMove
 
 '''
 Helper method to make the first recursive call
 '''
-def findBestMoveMinMax(gs, validMoves):
+def findBestMove(gs, validMoves):
     global nextMove
     nextMove = None
-    findMoveMinMax(gs, validMoves, DEPTH, gs.whiteToMove)
+    # findMoveMinMax(gs, validMoves, DEPTH, gs.whiteToMove)
+    findMoveNegaMax(gs, validMoves, DEPTH, 1 if gs.whiteToMove else -1)
     return nextMove
 
+# MinMax Algorithm
 def findMoveMinMax(gs, validMoves, depth, maximizingPlayer):
     global nextMove
     if depth == 0:
@@ -98,6 +100,24 @@ def findMoveMinMax(gs, validMoves, depth, maximizingPlayer):
                     nextMove = move
             gs.undoMove()
         return minScore
+
+# NegaMax Algorithm
+def findMoveNegaMax(gs, validMoves, depth, turnMultiplier):
+    global nextMove
+    if depth == 0:
+        return turnMultiplier * scoreBoard(gs)
+
+    maxScore = -CHECKMATE
+    for move in validMoves:
+        gs.makeMove(move)
+        nextMoves = gs.getValidMoves()
+        score = -findMoveNegaMax(gs, nextMoves, depth - 1, -turnMultiplier)
+        if score > maxScore:
+            maxScore = score
+            if depth == DEPTH:
+                nextMove = move
+        gs.undoMove()
+    return maxScore
 
 '''
 A positive score is good for white, negative score is good for black
