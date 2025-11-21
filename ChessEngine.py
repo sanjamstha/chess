@@ -105,6 +105,9 @@ class GameState():
                 else: #queenside
                     self.board[move.endRow][move.endCol-2] = self.board[move.endRow][move.endCol+1]
                     self.board[move.endRow][move.endCol+1] = '--'
+
+            self.checkMate = False
+            self.stalemate = False
     
     def updateCastleRights(self, move):
         if move.pieceMoved == 'wK':

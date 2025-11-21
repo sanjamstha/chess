@@ -8,7 +8,7 @@ def findRandomMove(validMoves):
     return validMoves[random.randint(0, len(validMoves)-1)]
 
 # Greedy ALgorithm
-# def findBestMove(gs, validMoves):
+# def greedyMove(gs, validMoves):
 #     turnMultiplier = 1 if gs.whiteToMove else -1
 #     maxScore = -CHECKMATE
 #     bestMove = None
@@ -31,21 +31,27 @@ def findBestMove(gs, validMoves):
     turnMultiplier = 1 if gs.whiteToMove else -1
     opponentMinMaxScore = CHECKMATE
     bestPlayerMove = None
+    random.shuffle(validMoves)
     for playerMove in validMoves:
         gs.makeMove(playerMove)
         opponentsMoves = gs.getValidMoves()
-        opponentMaxScore = -CHECKMATE
-        for opponentsMove in opponentsMoves:
-            gs.makeMove(opponentsMove)
-            if gs.checkMate:
-                score = -turnMultiplier * CHECKMATE
-            elif gs.staleMate:
-                score = STALEMATE
-            else:
-                score = -turnMultiplier * scoreMaterial(gs.board)
-            if score > opponentMaxScore:
-                opponentMaxScore = score
-            gs.undoMove()
+        if gs.staleMate:
+            opponentMaxScore = STALEMATE
+        elif gs.checkMate:
+            opponentMaxScore = -CHECKMATE
+        else:
+            opponentMaxScore = -CHECKMATE
+            for opponentsMove in opponentsMoves:
+                gs.makeMove(opponentsMove)
+                if gs.checkMate:
+                    score = CHECKMATE
+                elif gs.staleMate:
+                    score = STALEMATE
+                else:
+                    score = -turnMultiplier * scoreMaterial(gs.board)
+                if score > opponentMaxScore:
+                    opponentMaxScore = score
+                gs.undoMove()
         if opponentMaxScore < opponentMinMaxScore:
             opponentMinMaxScore = opponentMaxScore
             bestPlayerMove = playerMove
