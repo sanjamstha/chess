@@ -28,7 +28,7 @@ def findRandomMove(validMoves):
 #     return bestMove
 
 # MinMax Algorithm with no recursion 
-# def findBestMove(gs, validMoves):
+# def findMoveMinMaxNoRecursion(gs, validMoves):
 #     turnMultiplier = 1 if gs.whiteToMove else -1
 #     opponentMinMaxScore = CHECKMATE
 #     bestPlayerMove = None
@@ -63,15 +63,20 @@ def findRandomMove(validMoves):
 Helper method to make the first recursive call
 '''
 def findBestMove(gs, validMoves):
-    global nextMove
+    global nextMove, counter
     nextMove = None
+    random.shuffle(validMoves)
+    counter = 0
     # findMoveMinMax(gs, validMoves, DEPTH, gs.whiteToMove)
-    findMoveNegaMax(gs, validMoves, DEPTH, 1 if gs.whiteToMove else -1)
+    # findMoveNegaMax(gs, validMoves, DEPTH, 1 if gs.whiteToMove else -1)
+    findMoveNegaMaxAlphaBeta(gs, validMoves, DEPTH, -CHECKMATE, CHECKMATE, 1 if gs.whiteToMove else -1)
+    print(counter)
     return nextMove
 
 # MinMax Algorithm
 def findMoveMinMax(gs, validMoves, depth, maximizingPlayer):
-    global nextMove
+    global nextMove, counter
+    counter += 1
     if depth == 0:
         return scoreMaterial(gs.board)
     
@@ -101,12 +106,14 @@ def findMoveMinMax(gs, validMoves, depth, maximizingPlayer):
             gs.undoMove()
         return minScore
 
-# NegaMax Algorithm
+# NegaMax Algorithm 
 def findMoveNegaMax(gs, validMoves, depth, turnMultiplier):
-    global nextMove
+    global nextMove, counter
+    counter += 1
     if depth == 0:
         return turnMultiplier * scoreBoard(gs)
 
+    # move ordering - checks, captures, attacks (implement later)
     maxScore = -CHECKMATE
     for move in validMoves:
         gs.makeMove(move)
@@ -117,6 +124,30 @@ def findMoveNegaMax(gs, validMoves, depth, turnMultiplier):
             if depth == DEPTH:
                 nextMove = move
         gs.undoMove()
+    return maxScore
+
+# NegaMax Algorithm with Alpha Beta Pruning
+def findMoveNegaMaxAlphaBeta(gs, validMoves, depth, alpha, beta, turnMultiplier):
+    global nextMove, counter
+    counter += 1
+    if depth == 0:
+        return turnMultiplier * scoreBoard(gs)
+
+    # move ordering - checks, captures, attacks (implement later)
+    maxScore = -CHECKMATE
+    for move in validMoves:
+        gs.makeMove(move)
+        nextMoves = gs.getValidMoves()
+        score = -findMoveNegaMaxAlphaBeta(gs, nextMoves, depth - 1, -beta, -alpha, -turnMultiplier)
+        if score > maxScore:
+            maxScore = score
+            if depth == DEPTH:
+                nextMove = move
+        gs.undoMove()
+        if maxScore > alpha: #pruning happens
+            alpha = maxScore
+        if alpha >= beta:
+            break
     return maxScore
 
 '''
