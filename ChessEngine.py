@@ -445,6 +445,8 @@ class Move():
         if self.isEnpassantMove:
             self.pieceCaptured = 'wp' if self.pieceMoved == 'bp' else 'bp'
 
+        self.isCapture = self.pieceCaptured != '--'
+        # Move ID 
         self.moveID = self.startRow *1000 + self.startCol *100 + self.endRow*10 + self.endCol
         # print(self.moveID)
 
@@ -459,3 +461,27 @@ class Move():
 
     def getRankFile(self,r,c):
         return self.colsToFiles[c] + self.rowsToRanks[r]
+
+    # Overriding the str() function
+    def __str__(self):
+        #castle move
+        if self.isCastleMove:
+            return "O-O" if self.endCol == 6 else "O-O-O"
+        endSquare = self.getRankFile(self.endRow, self.endCol)
+        #pawn moves
+        if self.pieceMoved[1] == 'p':
+            if self.isCapture:
+                return self.colsToFiles[self.startCol] + "x" + endSquare
+            else:
+                return endSquare
+            
+            #pawn promotion
+
+        # two of the same type of piece movint to a square
+        # also adding + for check move, and '#' for checkmate move
+
+        #piece moves
+        moveString = self.pieceMoved[1]
+        if self.isCapture:
+            moveString += 'x'
+        return moveString + endSquare
