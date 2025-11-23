@@ -36,8 +36,8 @@ def main():
     sqSelected = () # no square selected initially, keep track of last click of the user (tuple: row, col)
     playerClicks = [] # keep track of player clicks (two tuplesK: [(6,4),(4,4)])
     gameOver = False
-    playerOne = False #if a human is playing white, then this will be True. Ian AI is playing, then False
-    playerTwo = False #same as above but for black
+    playerOne = True #if a human is playing white, then this will be True. Ian AI is playing, then False
+    playerTwo = True #same as above but for black
     while running:
         humanTurn = (gs.whiteToMove and playerOne) or (not gs.whiteToMove and playerTwo)
 
@@ -96,8 +96,8 @@ def main():
             animate = True
 
         if moveMade:
-            # if animate:
-            #     animateMove(gs.moveLog[-1], screen, gs.board, clock)
+            if animate:
+                animateMove(gs.moveLog[-1], screen, gs.board, clock)
             validMoves = gs.getValidMoves()
             moveMade = False
             animate = False
@@ -173,6 +173,9 @@ def animateMove(move, screen, board, clock):
         p.draw.rect(screen, color, endSquare)
         # draw capture piece onto rectangle
         if move.pieceCaptured != '--':
+            if move.isEnpassantMove:
+                enPassantRow = move.endRow + 1  if move.pieceCaptured[0] == 'b' else move.endRow - 1
+                endSquare = p.Rect(move.endCol * SQ_SIZE, enPassantRow * SQ_SIZE, SQ_SIZE, SQ_SIZE)
             screen.blit(IMAGES[move.pieceCaptured], endSquare)
         # draw moving piece 
         screen.blit(IMAGES[move.pieceMoved], p.Rect(c*SQ_SIZE, r*SQ_SIZE, SQ_SIZE, SQ_SIZE))

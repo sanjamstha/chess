@@ -24,6 +24,7 @@ class GameState():
         self.checkMate = False
         self.staleMate = False
         self.enpassantPossible = () #coordinates for the square where en passant is possible
+        self.enpassantPossibleLog = [self.enpassantPossible]
         self.currentCastlingRight = castleRights(True, True, True, True)
         self.castleRightsLog = [castleRights(self.currentCastlingRight.wks, self.currentCastlingRight.bks, 
                                             self.currentCastlingRight.wqs, self.currentCastlingRight.bqs)]
@@ -57,6 +58,9 @@ class GameState():
         else:
             self.enpassantPossible = ()
         
+        # Append to enpassant log
+        self.enpassantPossibleLog.append(self.enpassantPossible)
+
         #castle move
         if move.isCastleMove:
             if move.endCol - move.startCol == 2: #kingside castle
@@ -78,6 +82,7 @@ class GameState():
             self.board[move.startRow][move.startCol] = move.pieceMoved
             self.board[move.endRow][move.endCol] = move.pieceCaptured
             self.whiteToMove = not self.whiteToMove
+            
             # update the king's location 
             if move.pieceMoved == 'wK':
                 self.whiteKingLocation = (move.startRow, move.startCol)
@@ -87,11 +92,10 @@ class GameState():
             #undo enpassant move
             if move.isEnpassantMove:
                 self.board[move.endRow][move.endCol] = '--' #leave landing sqaure blank
-                self.board[move.startRow][move.endCol] = move.pieceCaptured
-                self.enpassantPossible = (move.endRow, move.endCol)
-            # undo a 2 square pawn advance
-            if move.pieceMoved[1] == 'p' and abs(move.startRow - move.endRow) == 2:
-                self.enpassantPossible = ()
+                self.board[move.startRow][move.endCol] = move.pieceCaptured #puts the pawn back on the correct square it was captured from
+            self.enpassantPossibleLog.pop()
+            self.enpassantPossible = self.enpassantPossibleLog[-1]
+            
             # undo castling rights 
             self.castleRightsLog.pop() #get rid of new castle rights from the move we are undoing
             newRights = self.castleRightsLog[-1]
