@@ -1,9 +1,110 @@
 import random
 
-pieceScore = {"K":100, "Q":9, "R":5, "B":3, "N":3, "p":1}
+pieceScore = {"K":0, "Q":9, "R":5, "B":3, "N":3, "p":1}
 CHECKMATE = 1000
 STALEMATE = 0
 DEPTH = 3
+
+# Piece Square Tables
+pawn_pst = [
+    [ 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0],
+    [ 0.2,  0.3,  0.3, -0.1, -0.1,  0.3,  0.3,  0.2],
+    [ 0.2,  0.1,  0.0,  0.1,  0.1,  0.0,  0.1,  0.2],
+    [ 0.3,  0.3,  0.3,  0.4,  0.4,  0.3,  0.3,  0.3],
+    [ 0.4,  0.4,  0.4,  0.5,  0.5,  0.4,  0.4,  0.4],
+    [ 0.5,  0.5,  0.5,  0.6,  0.6,  0.5,  0.5,  0.5],
+    [ 0.7,  0.7,  0.7,  0.7,  0.7,  0.7,  0.7,  0.7],
+    [ 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0],
+]
+knight_pst = [
+    [-0.8, -0.4, -0.3, -0.3, -0.3, -0.3, -0.4, -0.8],
+    [-0.4, -0.2,  0.1,  0.2,  0.2,  0.1, -0.2, -0.4],
+    [-0.3,  0.2,  0.3,  0.35, 0.35, 0.3,  0.2, -0.3],
+    [-0.3,  0.1,  0.35, 0.45, 0.45, 0.35, 0.1, -0.3],
+    [-0.3,  0.1,  0.35, 0.45, 0.45, 0.35, 0.1, -0.3],
+    [-0.3,  0.2,  0.3,  0.35, 0.35, 0.3,  0.2, -0.3],
+    [-0.4, -0.2,  0.1,  0.2,  0.2,  0.1, -0.2, -0.4],
+    [-0.8, -0.4, -0.3, -0.3, -0.3, -0.3, -0.4, -0.8]
+]
+bishop_pst = [
+    [-0.2, -0.1, -0.1, -0.05, -0.05, -0.1, -0.1, -0.2],
+    [-0.1,  0.1,  0.15, 0.1,  0.1,  0.15, 0.1, -0.1],
+    [-0.1,  0.15, 0.2,  0.2,  0.2,  0.2,  0.15, -0.1],
+    [-0.05, 0.1,  0.2,  0.25, 0.25, 0.2,  0.1, -0.05],
+    [-0.05, 0.1,  0.2,  0.25, 0.25, 0.2,  0.1, -0.05],
+    [-0.1,  0.15, 0.2,  0.2,  0.2,  0.2,  0.15, -0.1],
+    [-0.1,  0.1,  0.15, 0.1,  0.1,  0.15, 0.1, -0.1],
+    [-0.2, -0.1, -0.1, -0.05, -0.05, -0.1, -0.1, -0.2]
+]
+rook_pst = [
+    [ 0.0,  0.0,  0.05, 0.1,  0.1,  0.05, 0.0,  0.0 ],
+    [-0.1, -0.05, 0.0,  0.05, 0.05, 0.0, -0.05, -0.1],
+    [-0.1,  0.0,  0.05, 0.1,  0.1,  0.05, 0.0, -0.1 ],
+    [-0.1,  0.0,  0.05, 0.1,  0.1,  0.05, 0.0, -0.1 ],
+    [-0.1,  0.0,  0.05, 0.1,  0.1,  0.05, 0.0, -0.1 ],
+    [-0.1,  0.0,  0.05, 0.1,  0.1,  0.05, 0.0, -0.1 ],
+    [ 0.2,  0.25, 0.25, 0.3,  0.3,  0.25, 0.25, 0.2 ],
+    [ 0.0,  0.0,  0.05, 0.1,  0.1,  0.05, 0.0,  0.0 ]
+]
+queen_pst = [
+    [-0.2, -0.1, -0.1, -0.05, -0.05, -0.1, -0.1, -0.2],
+    [-0.1,  0.0,  0.1,  0.05,  0.05,  0.1,  0.0, -0.1],
+    [-0.1,  0.1,  0.15, 0.1,   0.1,  0.15, 0.1, -0.1],
+    [-0.05, 0.05, 0.1,  0.15,  0.15, 0.1,  0.05, -0.05],
+    [-0.05, 0.05, 0.1,  0.15,  0.15, 0.1,  0.05, -0.05],
+    [-0.1,  0.1,  0.15, 0.1,   0.1,  0.15, 0.1, -0.1],
+    [-0.1,  0.0,  0.1,  0.05,  0.05,  0.1, 0.0, -0.1],
+    [-0.2, -0.1, -0.1, -0.05, -0.05, -0.1, -0.1, -0.2]
+]
+king_mid_pst = [
+    [-0.5, -0.6, -0.6, -0.7, -0.7, -0.6, -0.6, -0.5],
+    [-0.5, -0.6, -0.6, -0.7, -0.7, -0.6, -0.6, -0.5],
+    [-0.5, -0.6, -0.6, -0.7, -0.7, -0.6, -0.6, -0.5],
+    [-0.5, -0.6, -0.6, -0.7, -0.7, -0.6, -0.6, -0.5],
+    [-0.3, -0.4, -0.4, -0.5, -0.5, -0.4, -0.4, -0.3],
+    [-0.2, -0.2, -0.2, -0.2, -0.2, -0.2, -0.2, -0.2],
+    [ 0.1,  0.2,  0.0,  0.0,  0.0,  0.0,  0.2,  0.1],
+    [ 0.2,  0.3,  0.1,  0.0,  0.0,  0.1,  0.3,  0.2]
+]
+king_end_pst = [
+    [-0.2, -0.1,  0.0,  0.1,  0.1,  0.0, -0.1, -0.2],
+    [-0.1,  0.0,  0.1,  0.2,  0.2,  0.1,  0.0, -0.1],
+    [ 0.0,  0.1,  0.2,  0.3,  0.3,  0.2,  0.1,  0.0],
+    [ 0.1,  0.2,  0.3,  0.4,  0.4,  0.3,  0.2,  0.1],
+    [ 0.1,  0.2,  0.3,  0.4,  0.4,  0.3,  0.2,  0.1],
+    [ 0.0,  0.1,  0.2,  0.3,  0.3,  0.2,  0.1,  0.0],
+    [-0.1,  0.0,  0.1,  0.2,  0.2,  0.1,  0.0, -0.1],
+    [-0.2, -0.1,  0.0,  0.1,  0.1,  0.0, -0.1, -0.2]
+]
+
+piecePositionScores = {
+    "p": pawn_pst,
+    "B": bishop_pst,
+    "N": knight_pst,
+    "R": rook_pst,
+    "Q": queen_pst,
+    "K": king_mid_pst,
+}
+
+piecePositionScores_alt = {
+    "wp": pawn_pst,
+    "bp": pawn_pst[::-1],  # flipped for black
+    
+    "wN": knight_pst,
+    "bN": knight_pst[::-1],
+
+    "wB": bishop_pst,
+    "bB": bishop_pst[::-1],
+
+    "wR": rook_pst,
+    "bR": rook_pst[::-1],
+
+    "wQ": queen_pst,
+    "bQ": queen_pst[::-1],
+
+    "wK": king_mid_pst,
+    "bK": king_mid_pst[::-1],
+}
 
 def findRandomMove(validMoves):
     return validMoves[random.randint(0, len(validMoves)-1)]
@@ -78,7 +179,7 @@ def findMoveMinMax(gs, validMoves, depth, maximizingPlayer):
     global nextMove, counter
     counter += 1
     if depth == 0:
-        return scoreMaterial(gs.board)
+        return scoreBoard(gs)
     
     if maximizingPlayer:
         maxScore = -CHECKMATE
@@ -143,6 +244,7 @@ def findMoveNegaMaxAlphaBeta(gs, validMoves, depth, alpha, beta, turnMultiplier)
             maxScore = score
             if depth == DEPTH:
                 nextMove = move
+                # print(move, score)
         gs.undoMove()
         if maxScore > alpha: #pruning happens
             alpha = maxScore
@@ -163,23 +265,43 @@ def scoreBoard(gs):
         return STALEMATE
     
     score = 0
-    for row in gs.board:
-        for square in row:
-            if square[0] == 'w':
-                score += pieceScore[square[1]]
-            elif square[0] == 'b':
-                score -= pieceScore[square[1]]
+    for row in range(len(gs.board)):
+        for col in range(len(gs.board[row])):
+            piece = gs.board[row][col]
+            if piece != "--":
+                # score it positionally
+                piecePositionScore = 0
+                if piece[1] == "N":
+                    piecePositionScore = piecePositionScores["N"][row][col]
+
+                
+                # Material Score
+                if piece[0] == 'w':
+                    score += pieceScore[piece[1]] + piecePositionScore
+                elif piece[0] == 'b':
+                    score -= pieceScore[piece[1]] + piecePositionScore
+
+                # Piece-Square bonus
+                # pst = piecePositionScores[piece]  # piece is like "wp", "bN", etc.
+                # score += pst[row][col]  # use row and col, not r and c
+                
+                # Piece-Square bonus
+                # pst = piecePositionScores[piece]
+                # if piece[0] == 'w':
+                #     score += pst[r][c]
+                # else:
+                #     score -= pst[r][c]
     return score
 
-'''
-Score the board based on material
-'''
-def scoreMaterial(board):
-    score = 0
-    for row in board:
-        for square in row:
-            if square[0] == 'w':
-                score += pieceScore[square[1]]
-            elif square[0] == 'b':
-                score -= pieceScore[square[1]]
-    return score
+# '''
+# Score the board based on material
+# '''
+# def scoreMaterial(board):
+#     score = 0
+#     for row in board:
+#         for square in row:
+#             if square[0] == 'w':
+#                 score += pieceScore[square[1]]
+#             elif square[0] == 'b':
+#                 score -= pieceScore[square[1]]
+#     return score
