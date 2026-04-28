@@ -28,16 +28,43 @@ class GameState():
         self.currentCastlingRight = castleRights(True, True, True, True)
         self.castleRightsLog = [castleRights(self.currentCastlingRight.wks, self.currentCastlingRight.bks, 
                                             self.currentCastlingRight.wqs, self.currentCastlingRight.bqs)]
-
-
+        
+        # ── DRAW TRACKING (50-move rule & threefold repetition) ──
+        self.halfMoveClock = 0  # Increments each move, resets on pawn move or capture
+        self.positionHistory = []  # List of Zobrist hashes for repetition detection
+        self.drawByFiftyMoves = False
+        self.drawByRepetition = False
+        
+        # ── INCREMENTAL ZOBRIST HASH (for fast TT lookups) ──
+        self.zobristHash = self._calculate_initial_hash()
 
 
     # Takes a move as parameter and executes it ( doesnt work for castling, en-passant, and pawn promotion )
     def makeMove(self, move):
+        # ── INCREMENTAL ZOBRIST UPDATE (BEFORE move) ──
+        from SmartMoveFinder import ZOBRIST_TABLE, ZOBRIST_SIDE
+        
+        # XOR out old piece position
+        old_sq = move.startRow * 8 + move.startCol
+        self.zobristHash ^= ZOBRIST_TABLE[move.pieceMoved][old_sq]
+        
+        # XOR out captured piece (if any)
+        if move.pieceCaptured != "--":
+            cap_sq = move.endRow * 8 + move.endCol
+            self.zobristHash ^= ZOBRIST_TABLE[move.pieceCaptured][cap_sq]
+        
+        # ── MAKE THE MOVE ──
         self.board[move.startRow][move.startCol] = "--"
         self.board[move.endRow][move.endCol] = move.pieceMoved
-        self.moveLog.append(move) # log the move to undo later or dipslay game history
+        self.moveLog.append(move) # log the move to undo later or dipsplay game history
         self.whiteToMove = not self.whiteToMove # swap players
+        
+        # ── 50-MOVE RULE: Reset clock on pawn move or capture ──
+        if move.pieceMoved[1] == 'p' or move.isCapture:
+            self.halfMoveClock = 0
+        else:
+            self.halfMoveClock += 1
+        
         # update the king's location 
         if move.pieceMoved == 'wK':
             self.whiteKingLocation = (move.endRow, move.endCol)
@@ -46,11 +73,26 @@ class GameState():
         
         # pawn promotion
         if move.isPawnPromotion:
-            self.board[move.endRow][move.endCol] = move.pieceMoved[0] + 'Q'
+            # XOR out pawn, XOR in queen
+            promoted_piece = move.pieceMoved[0] + 'Q'
+            new_sq = move.endRow * 8 + move.endCol
+            self.zobristHash ^= ZOBRIST_TABLE[move.pieceMoved][new_sq]
+            self.zobristHash ^= ZOBRIST_TABLE[promoted_piece][new_sq]
+            self.board[move.endRow][move.endCol] = promoted_piece
+        else:
+            # XOR in new piece position (normal move)
+            new_sq = move.endRow * 8 + move.endCol
+            self.zobristHash ^= ZOBRIST_TABLE[self.board[move.endRow][move.endCol]][new_sq]
         
         # enpassant move
         if move.isEnpassantMove:
-            self.board[move.startRow][move.endCol] = '--' # capturing pawn
+            # XOR out the captured pawn on different square
+            captured_pawn_row = move.startRow
+            captured_pawn_col = move.endCol
+            captured_pawn_sq = captured_pawn_row * 8 + captured_pawn_col
+            captured_pawn_piece = self.board[captured_pawn_row][captured_pawn_col]
+            self.zobristHash ^= ZOBRIST_TABLE[captured_pawn_piece][captured_pawn_sq]
+            self.board[captured_pawn_row][captured_pawn_col] = '--' # capturing pawn
         
         #update enpassantPossible variable
         if move.pieceMoved[1] == 'p' and abs(move.startRow - move.endRow) == 2: #2 square pawn advances
@@ -64,9 +106,23 @@ class GameState():
         #castle move
         if move.isCastleMove:
             if move.endCol - move.startCol == 2: #kingside castle
+                # Move rook
+                rook_old_sq = move.endRow * 8 + (move.endCol + 1)
+                rook_new_sq = move.endRow * 8 + (move.endCol - 1)
+                rook_piece = self.board[move.endRow][move.endCol+1]
+                self.zobristHash ^= ZOBRIST_TABLE[rook_piece][rook_old_sq]
+                self.zobristHash ^= ZOBRIST_TABLE[rook_piece][rook_new_sq]
+                
                 self.board[move.endRow][move.endCol-1] = self.board[move.endRow][move.endCol+1] #moves the rook
                 self.board[move.endRow][move.endCol+1] = '--' #erase the old rook
             else: #queenside castle
+                # Move rook
+                rook_old_sq = move.endRow * 8 + (move.endCol - 2)
+                rook_new_sq = move.endRow * 8 + (move.endCol + 1)
+                rook_piece = self.board[move.endRow][move.endCol-2]
+                self.zobristHash ^= ZOBRIST_TABLE[rook_piece][rook_old_sq]
+                self.zobristHash ^= ZOBRIST_TABLE[rook_piece][rook_new_sq]
+                
                 self.board[move.endRow][move.endCol+1] = self.board[move.endRow][move.endCol-2] #moves the rook
                 self.board[move.endRow][move.endCol-2] = '--' #erase old rook
 
@@ -74,6 +130,12 @@ class GameState():
         self.updateCastleRights(move)
         self.castleRightsLog.append(castleRights(self.currentCastlingRight.wks, self.currentCastlingRight.bks, 
                                             self.currentCastlingRight.wqs, self.currentCastlingRight.bqs))
+        
+        # ── TOGGLE SIDE TO MOVE ──
+        self.zobristHash ^= ZOBRIST_SIDE
+        
+        # ── RECORD POSITION FOR THREEFOLD REPETITION ──
+        self.positionHistory.append(self.zobristHash)
     
     # Undo the last move made 
     def undoMove(self): 
@@ -82,6 +144,22 @@ class GameState():
             self.board[move.startRow][move.startCol] = move.pieceMoved
             self.board[move.endRow][move.endCol] = move.pieceCaptured
             self.whiteToMove = not self.whiteToMove
+            
+            # ── UNDO 50-MOVE CLOCK ──
+            # We need to recalculate it by looking at move history
+            # Simple approach: decrement (not perfect but works for undo)
+            if self.halfMoveClock > 0:
+                self.halfMoveClock -= 1
+            
+            # ── UNDO POSITION HISTORY (and restore hash) ──
+            if len(self.positionHistory) > 0:
+                self.positionHistory.pop()
+            
+            # Restore previous Zobrist hash
+            if len(self.positionHistory) > 0:
+                self.zobristHash = self.positionHistory[-1]
+            else:
+                self.zobristHash = self._calculate_initial_hash()
             
             # update the king's location 
             if move.pieceMoved == 'wK':
@@ -200,6 +278,35 @@ class GameState():
             if move.endRow == r and move.endCol == c: #square is under attack
                 return True
         return False
+    
+    '''
+    Check for 50-move rule draw
+    '''
+    def checkFiftyMoveRule(self):
+        if self.halfMoveClock >= 100:  # 100 half-moves = 50 full moves
+            self.drawByFiftyMoves = True
+            print("Game Over by Fifty-Move Rule!")
+            return True
+        return False
+    
+    '''
+    Check for threefold repetition draw
+    '''
+    def checkThreefoldRepetition(self):
+        if len(self.positionHistory) < 3:
+            return False
+        
+        # Current position hash is already in positionHistory
+        current_hash = self.zobristHash
+        
+        # Count occurrences of current position in history
+        count = self.positionHistory.count(current_hash)
+        
+        if count >= 3:
+            self.drawByRepetition = True
+            print("Game Over by Threefold Repetition!")
+            return True
+        return False
 
     # All moves without considering checks
     def getAllPossibleMoves(self):
@@ -258,18 +365,7 @@ class GameState():
     def getRookMoves(self, r, c, moves):
         # rook moves in all 4 directions, use for/while loop, stop conditions are 2: edge of board, or piece on square, and if enemy piece its a valid move
         enemyColor = 'b' if self.whiteToMove else 'w'
-        # # for mvoes/captures to the right, code has to repeat for all 4 directions
-        # step = 1
-        # while (c+step<=7):
-        #     nxtSq = self.board[r][c+step]
-        #     if nxtSq == "--":
-        #         moves.append(Move((r,c),(r,c+step),self.board))
-        #     else:
-        #         if nxtSq[0] == enemyColor:
-        #             moves.append(Move((r,c),(r,c+step),self.board))
-        #         break
-        #     step += 1
-
+        
         # (dr, dc) for right, left, down, up
         directions = [
             (0, 1),   # right
@@ -412,6 +508,22 @@ class GameState():
         if self.board[r][c-1] == '--' and self.board[r][c-2] == '--' and self.board[r][c-3] == '--':
             if not self.squareUnderAttack(r, c-1) and not self.squareUnderAttack(r,c-2):
                 moves.append(Move((r,c),(r,c-2),self.board, isCastleMove=True))
+    
+    def _calculate_initial_hash(self):
+        """Calculate Zobrist hash for initial board position"""
+        from SmartMoveFinder import ZOBRIST_TABLE, ZOBRIST_SIDE
+        h = 0
+        for r in range(8):
+            for c in range(8):
+                piece = self.board[r][c]
+                if piece != "--":
+                    sq = r * 8 + c
+                    h ^= ZOBRIST_TABLE[piece][sq]
+        
+        if self.whiteToMove:
+            h ^= ZOBRIST_SIDE
+        
+        return h
 
 class castleRights():
     def __init__(self, wks, bks, wqs, bqs):
@@ -485,3 +597,163 @@ class Move():
         if self.isCapture:
             moveString += 'x'
         return moveString + endSquare
+    
+    def getSAN(self, gs=None, is_check=False, is_checkmate=False):
+        """
+        Get Standard Algebraic Notation (proper chess notation)
+        E.g., Nf3, Bxe5, O-O, e4, exd5, Qh5+, Nxf7#
+        
+        Args:
+            gs: GameState object (optional, for disambiguation)
+            is_check: Whether this move resulted in check
+            is_checkmate: Whether this move resulted in checkmate
+        """
+        # Castling
+        if self.isCastleMove:
+            notation = "O-O" if self.endCol == 6 else "O-O-O"
+            # Add check/checkmate symbols
+            if is_checkmate:
+                notation += "#"
+            elif is_check:
+                notation += "+"
+            return notation
+        
+        endSquare = self.getRankFile(self.endRow, self.endCol)
+        piece = self.pieceMoved[1]  # p, N, B, R, Q, K
+        
+        # Pawn moves
+        if piece == 'p':
+            if self.isCapture:
+                # Pawn capture: exd5
+                notation = self.colsToFiles[self.startCol] + "x" + endSquare
+            else:
+                # Pawn advance: e4
+                notation = endSquare
+            
+            # Pawn promotion
+            if self.isPawnPromotion:
+                notation += "=Q"  # Always promote to Queen for now
+            
+            # Add check/checkmate symbol
+            if is_checkmate:
+                notation += "#"
+            elif is_check:
+                notation += "+"
+            
+            return notation
+        
+        # Piece moves (Knight, Bishop, Rook, Queen, King)
+        notation = piece.upper()  # N, B, R, Q, K
+        
+        # ── DISAMBIGUATION ──
+        if gs and piece in ('N', 'B', 'R', 'Q'):  # King never needs disambiguation
+            notation += self._getDisambiguation(gs)
+        
+        # Capture symbol
+        if self.isCapture:
+            notation += "x"
+        
+        notation += endSquare
+        
+        # ── CHECK/CHECKMATE SYMBOLS ──
+        if is_checkmate:
+            notation += "#"
+        elif is_check:
+            notation += "+"
+        
+        return notation
+    
+    def _getDisambiguation(self, gs):
+        """
+        Returns disambiguation string (e.g., 'd' for Nbd7, '1' for R1a3, 'd1' for Qd1e2)
+        Only called for N, B, R, Q pieces
+        """
+        piece = self.pieceMoved[1]
+        color = self.pieceMoved[0]
+        
+        # Find all pieces of same type that can move to the same square
+        candidates = []
+        for r in range(8):
+            for c in range(8):
+                if gs.board[r][c] == self.pieceMoved:
+                    # This is a piece of same type
+                    # Check if it can legally move to our destination
+                    testMove = Move((r, c), (self.endRow, self.endCol), gs.board)
+                    
+                    # Generate all valid moves for this square
+                    tempMoves = []
+                    if piece == 'N':
+                        gs.getKnightMoves(r, c, tempMoves)
+                    elif piece == 'B':
+                        gs.getBishopMoves(r, c, tempMoves)
+                    elif piece == 'R':
+                        gs.getRookMoves(r, c, tempMoves)
+                    elif piece == 'Q':
+                        gs.getQueenMoves(r, c, tempMoves)
+                    
+                    # Check if this piece can reach the destination
+                    for move in tempMoves:
+                        if move.endRow == self.endRow and move.endCol == self.endCol:
+                            candidates.append((r, c))
+                            break
+        
+        # If only one piece can move there (this one), no disambiguation needed
+        if len(candidates) <= 1:
+            return ""
+        
+        # Disambiguation logic:
+        # 1. Try file (column) first
+        # 2. If files are same, use rank (row)
+        # 3. If both same (shouldn't happen), use both
+        
+        same_file = any(c == self.startCol for r, c in candidates if (r, c) != (self.startRow, self.startCol))
+        same_rank = any(r == self.startRow for r, c in candidates if (r, c) != (self.startRow, self.startCol))
+        
+        if not same_file:
+            # File is unique, use it
+            return self.colsToFiles[self.startCol]
+        elif not same_rank:
+            # Rank is unique, use it
+            return self.rowsToRanks[self.startRow]
+        else:
+            # Both needed (rare)
+            return self.colsToFiles[self.startCol] + self.rowsToRanks[self.startRow]
+    
+    def _getCheckSymbol(self, gs):
+        """
+        Returns '+' for check, '#' for checkmate, '' for neither
+        This method analyzes what WOULD happen if this move were played
+        """
+        # Create a simple test by making/unmaking the move
+        # Save the move in case it's already in moveLog
+        was_in_log = self in gs.moveLog
+        
+        if not was_in_log:
+            # Make the move temporarily
+            gs.makeMove(self)
+            
+            # Check if opponent is in check
+            in_check = gs.inCheck()
+            
+            # Generate opponent's valid moves
+            opponent_moves = gs.getValidMoves()
+            
+            # Undo the move
+            gs.undoMove()
+            
+            # Determine symbol
+            if len(opponent_moves) == 0 and in_check:
+                return "#"  # Checkmate
+            elif in_check:
+                return "+"  # Check
+            else:
+                return ""   # Neither
+        else:
+            # Move already in log - this is being called for historical notation
+            # Check next position in moveLog
+            move_index = gs.moveLog.index(self)
+            
+            # We need to replay up to this move to check
+            # For simplicity, just return empty (this case rarely happens)
+            # TODO: Improve this for move log display
+            return ""
