@@ -267,7 +267,7 @@ def findBestMove(gs, validMoves, difficulty='medium'):
     if len(_tt) > TT_MAX_SIZE:
         _tt.clear()
 
-    depth_map = {'easy': 1, 'medium': 3, 'hard': 4}
+    depth_map = {'easy': 1, 'medium': 2, 'hard': 3}
     max_depth = depth_map.get(difficulty, 3)
 
     random.shuffle(validMoves)

@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import os
 import pygame as p
 import bcrypt
+import sys
 
 from database.db import Database
 
@@ -28,7 +30,8 @@ class AdminPanel:
         self.width = width
         self.height = height
         self.screen = p.display.set_mode((width, height))
-        p.display.set_caption("Chess - Admin Dashboard")
+        p.display.set_caption("Chessly - Admin Dashboard")
+        self.set_window_icon()
 
         self.title_font = p.font.SysFont("Arial", 34, bold=True)
         self.header_font = p.font.SysFont("Arial", 24, bold=True)
@@ -66,6 +69,16 @@ class AdminPanel:
         self.create_user_rect = None
 
         self.refresh_data()
+
+    def set_window_icon(self):
+        """Set the application window icon when available."""
+        base_path = getattr(sys, "_MEIPASS", os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        icon_path = os.path.join(base_path, "images", "chessly.png")
+        if os.path.exists(icon_path):
+            try:
+                p.display.set_icon(p.image.load(icon_path))
+            except p.error:
+                pass
 
     def refresh_data(self):
         self.users = self.db.get_all_users()

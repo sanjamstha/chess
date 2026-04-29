@@ -1,5 +1,6 @@
 import pygame as p
 import sys
+import os
 from typing import Optional, Tuple
 from database.db import Database
 from auth.auth import Auth
@@ -13,7 +14,8 @@ class LoginScreen:
         self.width = width
         self.height = height
         self.screen = p.display.set_mode((width, height))
-        p.display.set_caption("Chess Game - Login")
+        p.display.set_caption("Chessly - Login")
+        self.set_window_icon()
         
         # Colors - CONSISTENT emerald green theme
         self.BG_COLOR = (40, 44, 52)           # Dark background
@@ -64,6 +66,16 @@ class LoginScreen:
         self.session = Session()
         
         self.clock = p.time.Clock()
+
+    def set_window_icon(self):
+        """Set the application window icon when available."""
+        base_path = getattr(sys, "_MEIPASS", os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        icon_path = os.path.join(base_path, "images", "chessly.png")
+        if os.path.exists(icon_path):
+            try:
+                p.display.set_icon(p.image.load(icon_path))
+            except p.error:
+                pass
     
     def draw_input_field(self, x, y, width, height, text, placeholder, active, is_password=False):
         """Draw an input field with blinking cursor"""

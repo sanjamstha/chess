@@ -1,3 +1,5 @@
+import os
+import sys
 import pygame as p
 import ChessEngine, SmartMoveFinder
 from ui.login_screen import LoginScreen
@@ -38,6 +40,7 @@ HIGHLIGHT_SELECTED = (130, 151, 105, 128)
 # GLOBAL STATE
 # ═══════════════════════════════════════════════════════════════
 IMAGES = {}
+APP_NAME = "Chessly"
 
 # Game state
 game_mode = "play"  # "play", "replay", or "finished"
@@ -52,12 +55,26 @@ black_ai_difficulty = "medium"
 move_list_scroll = 0
 move_list_max_scroll = 0
 
+def get_asset_path(*path_parts):
+    """Resolve asset paths for both source runs and PyInstaller builds."""
+    base_path = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(base_path, *path_parts)
+
+def set_app_icon():
+    """Set the application window icon when available."""
+    icon_path = get_asset_path("images", "chessly.png")
+    if os.path.exists(icon_path):
+        try:
+            p.display.set_icon(p.image.load(icon_path))
+        except p.error:
+            pass
+
 def loadImages():
     """Load piece images"""
     pieces = ['wp','wK','wQ','wN','wB','wR','bp','bK','bQ','bN','bB','bR']
     for piece in pieces:
         IMAGES[piece] = p.transform.smoothscale(
-            p.image.load(f"images/{piece}.png"),
+            p.image.load(get_asset_path("images", f"{piece}.png")),
             (SQ_SIZE, SQ_SIZE)
         )
 
@@ -86,7 +103,7 @@ def main():
     # STEP 1: LOGIN
     # ────────────────────────────────────────────────────────────
     print("\n" + "="*50)
-    print("CHESS GAME - Starting Login Screen")
+    print(f"{APP_NAME.upper()} - Starting Login Screen")
     print("="*50 + "\n")
     
     login_screen = LoginScreen()
@@ -115,7 +132,8 @@ def main():
     # ────────────────────────────────────────────────────────────
     p.init()
     screen = p.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
-    p.display.set_caption(f"Chess - {session.get_username()}")
+    set_app_icon()
+    p.display.set_caption(f"{APP_NAME} - {session.get_username()}")
     clock = p.time.Clock()
     
     loadImages()
@@ -287,6 +305,8 @@ def run_single_game(screen, clock, db, session):
                         navigate_replay(gs, "start")
                     elif e.key == p.K_UP:
                         navigate_replay(gs, "end")
+                    elif e.key == p.K_u:
+                        try_undo_move(gs, validMoves, game_is_active)
                     elif e.key == p.K_f:
                         board_flipped = not board_flipped
         
@@ -836,14 +856,7 @@ def handle_sidebar_click(x, y, gs, db, game_id, session, validMoves, game_is_act
                 return None
             
             if label == "Undo Move":
-                # Only allow undo in play mode and if game is active
-                if game_mode == "play" and len(gs.moveLog) >= 2 and game_is_active:
-                    # Undo last 2 moves (player + AI)
-                    gs.undoMove()
-                    gs.undoMove()
-                    # CRITICAL FIX: Regenerate valid moves after undo
-                    validMoves.clear()
-                    validMoves.extend(gs.getValidMoves())
+                try_undo_move(gs, validMoves, game_is_active)
             
             elif label == "New Game":
                 # Check if current game is active
@@ -884,6 +897,17 @@ def handle_sidebar_click(x, y, gs, db, game_id, session, validMoves, game_is_act
     # The move log area is now ONLY for scrolling, not for navigation
     
     return None
+
+
+def try_undo_move(gs, validMoves, game_is_active):
+    """Run the existing sidebar undo behavior and report if it succeeded."""
+    if game_mode == "play" and len(gs.moveLog) >= 2 and game_is_active:
+        gs.undoMove()
+        gs.undoMove()
+        validMoves.clear()
+        validMoves.extend(gs.getValidMoves())
+        return True
+    return False
 
 
 def show_confirmation_dialog(message):

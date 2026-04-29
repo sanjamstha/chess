@@ -1,5 +1,15 @@
+# PyInstaller folders
+build/
+dist/
+*.spec
+
+# Python cache
 __pycache__/
-images_svg/
-env/
+*.pyc
+
+#Database
 *.db
+
+#Others
+env/
 .vscode/
