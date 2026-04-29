@@ -189,7 +189,7 @@ class GameState():
                     self.board[move.endRow][move.endCol+1] = '--'
 
             self.checkMate = False
-            self.stalemate = False
+            self.staleMate = False
     
     def updateCastleRights(self, move):
         if move.pieceMoved == 'wK':
@@ -226,6 +226,10 @@ class GameState():
 
     #All moves considering checks
     def getValidMoves(self):
+        # Recompute terminal flags from scratch for the side to move.
+        self.checkMate = False
+        self.staleMate = False
+
         tempEnpassantPossible = self.enpassantPossible
         tempCastleRights = castleRights(self.currentCastlingRight.wks, self.currentCastlingRight.bks, 
                                         self.currentCastlingRight.wqs, self.currentCastlingRight.bqs) #copy the current castling rights
